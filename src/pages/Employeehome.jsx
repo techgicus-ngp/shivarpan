@@ -1398,12 +1398,20 @@ const SHARE =
   "M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M16 6l-4-4-4 4M12 2v14";
 const mapUrl = (map) => `/maps/${encodeURIComponent(map.id)}`;
 
+
+// const COVERS = [
+//   ["ghuri", gauriNagar],
+//   ["shivgarh", shivgad],
+//   ["wardha 2", maheshNagar],
+//   ["wardha 3", vaibhavNagar1],
+//   ["wardha 4", vaibhavNagar2],
+// ];
 const COVERS = [
   ["ghuri", gauriNagar],
+  ["mahesh", maheshNagar],
   ["shivgarh", shivgad],
-  ["wardha 2", maheshNagar],
-  ["wardha 3", vaibhavNagar1],
-  ["wardha 4", vaibhavNagar2],
+  ["vaibhav nagar 1", vaibhavNagar1],
+  ["vaibhav nagar 2", vaibhavNagar2],
 ];
 
 const coverFor = (map) => {
