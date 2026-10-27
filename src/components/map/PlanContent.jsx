@@ -401,7 +401,7 @@ const numOf = (f) => {
   return m ? parseInt(m[0], 10) : 999;
 };
 
-const ROAD_FONT_BOOST = 2;
+const ROAD_FONT_BOOST = 0;
 
 /* One reading of a plot's status, shared by the shape and its number:
    they have to agree, or a plot ends up with dark ink on a red fill.

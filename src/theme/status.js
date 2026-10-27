@@ -88,7 +88,7 @@ export const STATUS = {
   // },
   booked: {
     key: 'booked', doc: 'Booked', label: 'Booked', legacy: [],
-    fill: '#1e325d', dot: '#1e325d', ink: '#FFFFFF',
+    fill: '#9c2121', dot: '#9c2121', ink: '#FFFFFF',
   },
 };
 
