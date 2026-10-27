@@ -155,7 +155,7 @@ export default function StatusLegend({ plots, status, show }) {
           }
         }
       `}</style>
-      <div className="status-legend">
+      {/* <div className="status-legend">
         {STATUS_KEYS.filter((k) => tally[k] > 0).map((k) => (
           <div key={k} className="status-legend__item">
             <span
@@ -169,7 +169,7 @@ export default function StatusLegend({ plots, status, show }) {
             <span className="status-legend__count">{tally[k]}</span>
           </div>
         ))}
-      </div>
+      </div> */}
     </>
   );
 }
