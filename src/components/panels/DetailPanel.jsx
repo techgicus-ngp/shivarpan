@@ -1779,6 +1779,428 @@
 
 
 
+// import React, { useCallback, useEffect, useRef, useState } from 'react';
+// import { SQFT } from '../../lib/units';
+// import { STATUS } from '../../theme/status';
+
+// /* Public plot card. Light palette to match the site (pearl, plum, blush,
+//    sage). Dimensions and facing are the hero; area, notes and the named
+//    location sit under them. */
+// const PEARL = '#FFFBFA';
+// const PLUM = '#5A2A3A';
+// const ACCENT = '#7B3B52';
+// const MUTED = '#7A5A66';
+// const LINE = '#F0DCDC';
+// const BLUSH = '#F6D3D3';
+// const SERIF = "Georgia, 'Times New Roman', serif";
+// const SANS = "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
+
+// const DOCK_BP = 1024;   // at or below this the panel docks to a corner
+// const isDockNow = () => typeof window !== 'undefined'
+//   && window.matchMedia(`(max-width: ${DOCK_BP}px)`).matches;
+
+// /* "East", "north-east", "NE facing" -> compass bearing for the needle */
+// const BEARING = {
+//   n: 0, north: 0, ne: 45, northeast: 45, e: 90, east: 90, se: 135, southeast: 135,
+//   s: 180, south: 180, sw: 225, southwest: 225, w: 270, west: 270, nw: 315, northwest: 315,
+// };
+// const bearingOf = (f) => BEARING[f.toLowerCase().replace(/facing/g, '').replace(/[^a-z]/g, '')];
+// const prettyDims = (s) => s.replace(/(\d)\s*[xX*]\s*(?=\d)/g, '$1 × ');
+
+// function Ico({ d, size = 16, children }) {
+//   return (
+//     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+//       strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+//       {d && <path d={d} />}
+//       {children}
+//     </svg>
+//   );
+// }
+// const PIN = 'M20 10c0 5.5-8 12-8 12s-8-6.5-8-12a8 8 0 0 1 16 0z';
+// const SHARE = 'M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M16 6l-4-4-4 4M12 2v14';
+
+// function Compass({ deg, size = 18 }) {
+//   return (
+//     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+//       strokeWidth="1.8" aria-hidden="true">
+//       <circle cx="12" cy="12" r="10" />
+//       <g style={{ transform: `rotate(${deg || 0}deg)`, transformOrigin: '12px 12px' }}>
+//         <path d="M12 4.5l3 7.5H9z" fill="currentColor" stroke="none" />
+//         <path d="M12 19.5L9 12h6z" fill="currentColor" stroke="none" opacity=".28" />
+//       </g>
+//     </svg>
+//   );
+// }
+
+// export default function DetailPanel({ plot, status, onClose, latLng, onReserve, locationName }) {
+//   const [dock, setDock] = useState(isDockNow);
+//   const [collapsed, setCollapsed] = useState(isDockNow); // chip on phones, open on laptops
+//   const [side, setSide] = useState('right');
+//   const [copied, setCopied] = useState(false);
+//   const boxRef = useRef(null);
+//   const reserveRef = useRef(onReserve);
+
+//   useEffect(() => { reserveRef.current = onReserve; }, [onReserve]);
+
+//   useEffect(() => {
+//     if (typeof window === 'undefined') return undefined;
+//     const mq = window.matchMedia(`(max-width: ${DOCK_BP}px)`);
+//     const onChange = (e) => setDock(e.matches);
+//     mq.addEventListener('change', onChange);
+//     return () => mq.removeEventListener('change', onChange);
+//   }, []);
+
+//   /* Tell the map which band the panel covers, so it can frame the plot in
+//      the space that is left. A closed chip reserves nothing. */
+//   useEffect(() => {
+//     const send = reserveRef.current;
+//     if (!send) return undefined;
+//     const el = boxRef.current;
+//     if (!plot || !el) { send({ right: 0, bottom: 0 }); return undefined; }
+
+//     const measure = () => {
+//       const r = el.getBoundingClientRect();
+//       const vw = window.innerWidth;
+//       const vh = window.innerHeight;
+//       if (dock) {
+//         if (collapsed) { send({ right: 0, bottom: 0 }); return; }
+//         if (side === 'right' && r.width <= vw * 0.62) {
+//           send({ right: Math.round(Math.max(vw - r.left, 0)), bottom: 0 });
+//         } else {
+//           send({ right: 0, bottom: Math.round(Math.max(vh - r.top, 0)) });
+//         }
+//         return;
+//       }
+//       send({ right: r.height > vh * 0.55 ? Math.round(Math.max(vw - r.left, 0)) : 0, bottom: 0 });
+//     };
+
+//     measure();
+//     const ro = new ResizeObserver(measure);
+//     ro.observe(el);
+//     window.addEventListener('resize', measure);
+//     return () => { ro.disconnect(); window.removeEventListener('resize', measure); };
+//   }, [plot, dock, collapsed, side]);
+
+//   useEffect(() => () => {
+//     if (reserveRef.current) reserveRef.current({ right: 0, bottom: 0 });
+//   }, []);
+
+//   const toggle = useCallback(() => setCollapsed((v) => !v), []);
+//   const flip = useCallback(() => setSide((s) => (s === 'right' ? 'left' : 'right')), []);
+
+//   if (!plot) return null;
+
+//   const st = status[plot.name] || 'available';
+//   const stMeta = STATUS[st];
+//   const doc = plot.doc || {};
+
+//   const dims = prettyDims(String(doc.dimensions || '').trim());
+//   const facing = String(doc.facing || '').trim();
+//   const notes = String(doc.notes || '').trim();
+//   const sqft = Math.round(plot.area * SQFT);
+//   const sqm = Math.round(plot.area);
+
+//   /* The named location: passed in, else what the plot record carries. */
+//   const place = String(locationName || doc.layoutName || doc.location || doc.address || '').trim();
+//   const pinLabel = place ? `Plot ${plot.name}, ${place}` : `Plot ${plot.name}`;
+//   const coords = latLng ? `${latLng.lat.toFixed(6)}, ${latLng.lng.toFixed(6)}` : null;
+
+//   /* q=lat,lng(Label) asks Google Maps to caption the pin with our name. */
+//   const mapUrl = latLng
+//     ? `https://www.google.com/maps?q=${latLng.lat.toFixed(6)},${latLng.lng.toFixed(6)}(${encodeURIComponent(pinLabel)})`
+//     : null;
+
+//   const share = async () => {
+//     if (!mapUrl) return;
+//     try {
+//       if (navigator.share) {
+//         await navigator.share({ title: pinLabel, text: pinLabel, url: mapUrl });
+//       } else {
+//         await navigator.clipboard.writeText(`${pinLabel}\n${mapUrl}`);
+//         setCopied(true);
+//         setTimeout(() => setCopied(false), 1800);
+//       }
+//     } catch { /* share sheet dismissed */ }
+//   };
+
+//   const more = 1 + (dims ? 1 : 0) + (facing ? 1 : 0) + (notes ? 1 : 0) + (latLng ? 1 : 0);
+
+//   return (
+//     <>
+//       <style>{`
+//         @keyframes panelIn { from { transform: translateX(14px); opacity: 0; } to { transform: none; opacity: 1; } }
+//         @keyframes dockIn { from { transform: translateY(10px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+//         .pp { position: absolute; top: 12px; right: 12px; width: 308px; max-height: calc(100% - 24px);
+//           display: flex; flex-direction: column; background: ${PEARL}; color: ${PLUM};
+//           border: 1px solid ${LINE}; border-radius: 18px; z-index: 12; box-sizing: border-box; overflow: hidden;
+//           box-shadow: 0 2px 4px rgba(90,42,58,.08), 0 18px 40px -14px rgba(90,42,58,.38);
+//           animation: panelIn .26s cubic-bezier(.16,1,.3,1); font-family: ${SANS}; }
+//         .pp :focus-visible { outline: 2px solid ${ACCENT}; outline-offset: 2px; }
+
+//         .pp-head { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; padding: 12px 8px 10px 12px; }
+//         .pp-title { display: flex; align-items: center; gap: 10px; min-width: 0; }
+//         /* only the plot number is highlighted */
+//         .pp-id { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; justify-content: center;
+//           min-width: 58px; padding: 7px 12px 8px; border-radius: 14px; background: ${PLUM}; color: #fff;
+//           box-shadow: 0 6px 14px -6px rgba(90,42,58,.65); }
+//         .pp-pre { margin-bottom: 3px; font-size: 9.5px; font-weight: 700; line-height: 1; letter-spacing: .2em;
+//           text-transform: uppercase; color: ${BLUSH}; }
+//         .pp-name { max-width: 120px; font-size: 30px; font-weight: 700; line-height: 1; letter-spacing: -.02em;
+//           font-variant-numeric: lining-nums tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+//         .pp-status { display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px 5px 9px; border-radius: 999px;
+//           font-size: 12px; font-weight: 600; white-space: nowrap; background: #fff; border: 1px solid ${LINE}; }
+//         @supports (background: color-mix(in srgb, red 10%, white)) {
+//           .pp-status { background: color-mix(in srgb, var(--st) 13%, #fff); border-color: color-mix(in srgb, var(--st) 28%, #fff); }
+//         }
+//         .pp-status i { width: 8px; height: 8px; border-radius: 50%; background: var(--st); flex: 0 0 auto; }
+
+//         .pp-mini { display: none; flex: 0 0 auto; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+//         .pp-sep { display: none; width: 1px; height: 22px; background: ${LINE}; flex: 0 0 auto; }
+//         .pp-quick { display: none; flex: 0 0 auto; border: 1px solid ${LINE}; border-radius: 10px; overflow: hidden; background: #fff; }
+//         .pp-quick > * { width: 34px; height: 34px; border: 0; border-left: 1px solid ${LINE}; background: none; color: ${ACCENT};
+//           display: flex; align-items: center; justify-content: center; cursor: pointer; text-decoration: none; }
+//         .pp-quick > *:first-child { border-left: 0; }
+//         .pp-quick > *:hover { background: #FBEAEA; }
+
+//         .pp-tools { flex: 0 0 auto; margin-left: auto; display: flex; align-items: center; }
+//         .pp-btn { background: none; border: 0; color: ${MUTED}; cursor: pointer; width: 34px; height: 34px; border-radius: 9px;
+//           display: flex; align-items: center; justify-content: center; gap: 3px; }
+//         .pp-btn:hover { background: #F6E3E3; color: ${PLUM}; }
+//         .pp-min { width: auto; min-width: 34px; padding: 0 6px; }
+//         .pp-chev { display: flex; transition: transform .2s ease; }
+//         .pp[data-collapsed="0"] .pp-chev { transform: rotate(180deg); }
+//         .pp-lbl { display: none; }
+//         .pp[data-collapsed="1"] .pp-title { cursor: pointer; }
+//         .pp-mini em { display: none; }
+//         .pp-count { font-size: 11px; font-weight: 700; }
+//         .pp-flip { display: none; }
+
+//         .pp-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+//           -webkit-overflow-scrolling: touch; padding: 4px 12px 12px; display: grid; gap: 10px; align-content: start; }
+//         .pp-k { font-size: 10.5px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: ${ACCENT}; }
+
+//         .pp-total { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px;
+//           padding: 12px 16px 13px; border-radius: 14px; background: #DCEBD7; }
+//         .pp-total-v { margin-top: 4px; display: flex; align-items: baseline; gap: 6px; font-size: 30px; font-weight: 700;
+//           line-height: 1; letter-spacing: -.02em; font-variant-numeric: lining-nums tabular-nums; }
+//         .pp-total-v span { font-size: 14px; font-weight: 600; letter-spacing: 0; }
+//         .pp-total-s { padding-bottom: 3px; font-size: 13px; font-weight: 600; color: ${MUTED}; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+//         .pp-specs { padding: 0 14px; background: #fff; border: 1px solid ${LINE}; border-radius: 14px; }
+//         .pp-spec { display: grid; grid-template-columns: 84px 1fr; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid ${LINE}; }
+//         .pp-spec:first-child { border-top: 0; }
+//         .pp-spec-k { font-size: 12.5px; font-weight: 500; color: ${MUTED}; }
+//         .pp-spec-v { display: flex; align-items: center; gap: 7px; min-width: 0; font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+//         .pp-spec-v svg { flex: 0 0 auto; color: ${ACCENT}; }
+
+//         .pp-notes { padding: 10px 14px; border-radius: 14px; background: #fff; border: 1px solid ${LINE}; }
+//         .pp-notes p { margin: 4px 0 0; font-size: 13px; line-height: 1.5; }
+
+//         .pp-loc { padding: 12px 14px 14px; border-radius: 14px; background: #fff; border: 1px solid ${LINE}; }
+//         .pp-loc-k { display: flex; align-items: center; gap: 6px; }
+//         .pp-loc-n { margin-top: 6px; font-family: ${SERIF}; font-size: 16px; font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; }
+//         .pp-loc-v { margin-top: 2px; font-size: 12px; color: ${MUTED}; font-variant-numeric: tabular-nums; }
+//         .pp-acts { display: grid; grid-template-columns: 1.3fr 1fr; gap: 8px; margin-top: 11px; }
+//         .pp-act { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; padding: 0 8px;
+//           border-radius: 999px; font: 600 13px ${SANS}; text-decoration: none; cursor: pointer; white-space: nowrap;
+//           border: 1px solid ${PLUM}; background: ${PLUM}; color: #fff; transition: background .14s ease; }
+//         .pp-act:hover { background: ${ACCENT}; border-color: ${ACCENT}; }
+//         .pp-act--ghost { background: #fff; color: ${PLUM}; }
+//         .pp-act--ghost:hover { background: #FBEAEA; color: ${PLUM}; border-color: ${PLUM}; }
+
+//         @media (min-width: ${DOCK_BP + 1}px) {
+//           .pp[data-collapsed="1"] { max-height: none; }
+//           .pp[data-collapsed="1"] .pp-body { display: none; }
+//           .pp[data-collapsed="1"] .pp-head { padding-bottom: 12px; }
+//         }
+//         @media (min-width: ${DOCK_BP + 1}px) and (max-width: 1240px) { .pp { width: 296px; } }
+
+//         /* tablet and phone: docked to a corner so the map stays free */
+//         @media (max-width: ${DOCK_BP}px) {
+//           .pp { top: auto; left: auto; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+//             width: min(340px, calc(100vw - 20px)); max-height: min(66vh, 520px);
+//             animation: dockIn .22s cubic-bezier(.16,1,.3,1); }
+//           .pp[data-side="left"] { left: 10px; right: auto; }
+//           .pp-flip { display: flex; }
+
+//           /* closed: a slim chip */
+//           .pp[data-collapsed="1"] { width: auto; max-width: calc(100vw - 20px); max-height: none; border-radius: 16px; }
+//           .pp[data-collapsed="1"] .pp-body { display: none; }
+//           .pp[data-collapsed="1"] .pp-head { padding: 6px; gap: 6px; }
+//           .pp[data-collapsed="1"] .pp-title { gap: 8px; }
+//           .pp[data-collapsed="1"] .pp-id { flex-direction: row; align-items: baseline; gap: 5px; min-width: 0;
+//             padding: 5px 10px; border-radius: 11px; }
+//           .pp[data-collapsed="1"] .pp-pre { margin: 0; font-size: 9px; }
+//           .pp[data-collapsed="1"] .pp-name { font-size: 21px; max-width: 70px; }
+//           .pp[data-collapsed="1"] .pp-mini, .pp[data-collapsed="1"] .pp-sep { display: block; }
+//           .pp[data-collapsed="1"] .pp-quick { display: flex; }
+//           /* the invitation to open the card: a labelled button, chevron pointing up */
+//           .pp[data-collapsed="1"] .pp-min { height: 38px; padding: 0 12px 0 15px; gap: 6px; border-radius: 999px;
+//             background: ${ACCENT}; color: #fff; font-size: 13px; font-weight: 600; white-space: nowrap; }
+//           .pp[data-collapsed="1"] .pp-min:hover { background: ${PLUM}; color: #fff; }
+//           .pp[data-collapsed="1"] .pp-lbl-long { display: inline; }
+//           .pp[data-collapsed="1"] .pp-count { display: none; }
+//           .pp[data-collapsed="1"] .pp-chev { transform: rotate(180deg); }
+//           .pp[data-collapsed="0"] .pp-chev { transform: none; }
+//         }
+//         @media (max-width: 430px) {
+//           .pp { right: 8px; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); width: calc(100vw - 16px); max-width: 360px; }
+//           .pp[data-side="left"] { left: 8px; }
+//           .pp[data-collapsed="1"] { width: calc(100vw - 16px); max-width: 360px; }
+//           .pp-spec { grid-template-columns: 78px 1fr; }
+//         }
+//         /* phones: the closed card is a tidy summary. Top: plot, availability and
+//            area. Bottom: one full-width "Show details" button. */
+//         @media (max-width: 640px) {
+//           .pp-btn { width: 38px; height: 38px; }
+//           .pp-min { min-width: 38px; }
+//           .pp[data-collapsed="1"] { width: min(340px, calc(100vw - 20px)); border-radius: 18px; }
+//           .pp[data-collapsed="1"] .pp-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
+//             grid-template-areas: "id st x" "id area x" "tog tog tog"; align-items: center; gap: 4px 12px;
+//             padding: 10px 8px 10px 10px; }
+//           .pp[data-collapsed="1"] .pp-title, .pp[data-collapsed="1"] .pp-tools { display: contents; }
+//           .pp[data-collapsed="1"] .pp-id { grid-area: id; align-self: stretch; flex-direction: column; align-items: center;
+//             justify-content: center; min-width: 62px; padding: 8px 14px 9px; border-radius: 14px; }
+//           .pp[data-collapsed="1"] .pp-pre { margin: 0 0 3px; font-size: 9.5px; }
+//           .pp[data-collapsed="1"] .pp-name { font-size: 28px; max-width: 84px; }
+//           .pp[data-collapsed="1"] .pp-status { grid-area: st; justify-self: start; align-self: end; margin: 0; }
+//           .pp[data-collapsed="1"] .pp-mini { grid-area: area; display: block; align-self: start; font-size: 15px; font-weight: 700;
+//             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+//           .pp[data-collapsed="1"] .pp-mini em { display: inline; font-style: normal; font-size: 13px; font-weight: 500; color: ${MUTED}; }
+//           .pp[data-collapsed="1"] .pp-close { grid-area: x; align-self: start; }
+//           .pp[data-collapsed="1"] .pp-min { grid-area: tog; width: 100%; height: 44px; margin-top: 6px; justify-content: center; }
+//           .pp[data-collapsed="1"] .pp-sep, .pp[data-collapsed="1"] .pp-quick, .pp[data-collapsed="1"] .pp-flip { display: none; }
+//         }
+//         /* very small phones: the open card's header needs the room */
+//         @media (max-width: 360px) { .pp .pp-flip { display: none; } }
+//         @media (max-height: 460px) and (max-width: 900px) { .pp { width: min(320px, calc(100vw - 20px)); max-height: 86vh; } }
+//         @media (prefers-reduced-motion: reduce) { .pp { animation: none; } .pp-act { transition: none; } }
+//       `}</style>
+
+//       <div
+//         className="pp"
+//         key={plot.name}
+//         ref={boxRef}
+//         style={{ '--st': stMeta.dot }}
+//         data-collapsed={collapsed ? '1' : '0'}
+//         data-side={side}
+//         role="dialog"
+//         aria-label={`Plot ${plot.name}`}
+//       >
+//         <div className="pp-head">
+//           <div className="pp-title" onClick={collapsed ? toggle : undefined}>
+//             <div className="pp-id">
+//               <span className="pp-pre">Plot</span>
+//               <span className="pp-name">{plot.name}</span>
+//             </div>
+//             <span className="pp-status"><i /><span>{stMeta.label}</span></span>
+//           </div>
+
+//           <span className="pp-sep" />
+//           <span className="pp-mini">
+//             {sqft.toLocaleString('en-IN')} sq ft
+//             <em> · {sqm.toLocaleString('en-IN')} m²</em>
+//           </span>
+
+//           {mapUrl && (
+//             <div className="pp-quick">
+//               <a href={mapUrl} target="_blank" rel="noopener noreferrer"
+//                 title="Open in Google Maps" aria-label={`Open ${pinLabel} in Google Maps`}>
+//                 <Ico d={PIN}><circle cx="12" cy="10" r="2.6" /></Ico>
+//               </a>
+//               <button type="button" onClick={share} title="Share location" aria-label="Share location">
+//                 <Ico d={SHARE} />
+//               </button>
+//             </div>
+//           )}
+
+//           <div className="pp-tools">
+//             <button type="button" className="pp-btn pp-flip" onClick={flip}
+//               title={side === 'right' ? 'Move to left corner' : 'Move to right corner'}
+//               aria-label={side === 'right' ? 'Move panel to left corner' : 'Move panel to right corner'}>
+//               <Ico d="M8 7 4 11l4 4M16 7l4 4-4 4M4 11h16" size={15} />
+//             </button>
+//             <button type="button" className="pp-btn pp-min" onClick={toggle} aria-expanded={!collapsed}
+//               title={collapsed ? 'Show full details' : 'Collapse'}
+//               aria-label={collapsed ? 'Show full details' : 'Collapse'}>
+//               <span className="pp-lbl pp-lbl-long">Show details</span>
+//               <span className="pp-chev"><Ico d="M6 9l6 6 6-6" size={15} /></span>
+//               {collapsed && <span className="pp-count">{more}</span>}
+//             </button>
+//             <button type="button" className="pp-btn pp-close" onClick={onClose} aria-label="Close plot details">
+//               <Ico d="M18 6 6 18M6 6l12 12" size={15} />
+//             </button>
+//           </div>
+//         </div>
+
+//         <div className="pp-body">
+//           <div className="pp-total">
+//             <div>
+//               <div className="pp-k">Total area</div>
+//               <div className="pp-total-v">
+//                 {sqft.toLocaleString('en-IN')}
+//                 <span>sq ft</span>
+//               </div>
+//             </div>
+//             <div className="pp-total-s">{sqm.toLocaleString('en-IN')} m²</div>
+//           </div>
+
+//           {(dims || facing) && (
+//             <div className="pp-specs">
+//               {dims && (
+//                 <div className="pp-spec">
+//                   <span className="pp-spec-k">Dimensions</span>
+//                   <span className="pp-spec-v">{dims}</span>
+//                 </div>
+//               )}
+//               {facing && (
+//                 <div className="pp-spec">
+//                   <span className="pp-spec-k">Facing</span>
+//                   <span className="pp-spec-v">
+//                     <Compass deg={bearingOf(facing)} />
+//                     {facing}
+//                   </span>
+//                 </div>
+//               )}
+//             </div>
+//           )}
+
+//           {notes && (
+//             <div className="pp-notes">
+//               <div className="pp-k">Notes</div>
+//               <p>{notes}</p>
+//             </div>
+//           )}
+
+//           {latLng && (
+//             <div className="pp-loc">
+//               <div className="pp-k pp-loc-k">
+//                 <Ico d={PIN} size={15}><circle cx="12" cy="10" r="2.6" /></Ico>
+//                 Location
+//               </div>
+//               <div className="pp-loc-n">{place || `Plot ${plot.name}`}</div>
+//               {place && <div className="pp-loc-v">Plot {plot.name}</div>}
+//               <div className="pp-loc-v">{coords}</div>
+//               <div className="pp-acts">
+//                 <a className="pp-act" href={mapUrl} target="_blank" rel="noopener noreferrer">
+//                   <Ico d={PIN} size={15}><circle cx="12" cy="10" r="2.6" /></Ico>
+//                   Open in Maps
+//                 </a>
+//                 <button type="button" className="pp-act pp-act--ghost" onClick={share}>
+//                   <Ico d={SHARE} size={15} />
+//                   {copied ? 'Link copied' : 'Share'}
+//                 </button>
+//               </div>
+//             </div>
+//           )}
+//         </div>
+//       </div>
+//     </>
+//   );
+// }
+
+
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { SQFT } from '../../lib/units';
 import { STATUS } from '../../theme/status';
@@ -1818,6 +2240,7 @@ function Ico({ d, size = 16, children }) {
 }
 const PIN = 'M20 10c0 5.5-8 12-8 12s-8-6.5-8-12a8 8 0 0 1 16 0z';
 const SHARE = 'M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M16 6l-4-4-4 4M12 2v14';
+const USER = 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2';
 
 function Compass({ deg, size = 18 }) {
   return (
@@ -1900,6 +2323,10 @@ export default function DetailPanel({ plot, status, onClose, latLng, onReserve, 
   const sqft = Math.round(plot.area * SQFT);
   const sqm = Math.round(plot.area);
 
+  /* Customer / owner name. Hidden on available plots so an old name never
+     shows on a plot that is still for sale. */
+  const customer = st !== 'available' ? String(doc.ownerName || '').trim() : '';
+
   /* The named location: passed in, else what the plot record carries. */
   const place = String(locationName || doc.layoutName || doc.location || doc.address || '').trim();
   const pinLabel = place ? `Plot ${plot.name}, ${place}` : `Plot ${plot.name}`;
@@ -1923,7 +2350,7 @@ export default function DetailPanel({ plot, status, onClose, latLng, onReserve, 
     } catch { /* share sheet dismissed */ }
   };
 
-  const more = 1 + (dims ? 1 : 0) + (facing ? 1 : 0) + (notes ? 1 : 0) + (latLng ? 1 : 0);
+  const more = 1 + (dims ? 1 : 0) + (facing ? 1 : 0) + (customer ? 1 : 0) + (notes ? 1 : 0) + (latLng ? 1 : 0);
 
   return (
     <>
@@ -2146,7 +2573,7 @@ export default function DetailPanel({ plot, status, onClose, latLng, onReserve, 
             <div className="pp-total-s">{sqm.toLocaleString('en-IN')} m²</div>
           </div>
 
-          {(dims || facing) && (
+          {(dims || facing || customer) && (
             <div className="pp-specs">
               {dims && (
                 <div className="pp-spec">
@@ -2160,6 +2587,15 @@ export default function DetailPanel({ plot, status, onClose, latLng, onReserve, 
                   <span className="pp-spec-v">
                     <Compass deg={bearingOf(facing)} />
                     {facing}
+                  </span>
+                </div>
+              )}
+              {customer && (
+                <div className="pp-spec">
+                  <span className="pp-spec-k">Customer</span>
+                  <span className="pp-spec-v">
+                    <Ico d={USER} size={18}><circle cx="12" cy="7" r="4" /></Ico>
+                    {customer}
                   </span>
                 </div>
               )}

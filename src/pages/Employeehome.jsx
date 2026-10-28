@@ -1399,13 +1399,6 @@ const SHARE =
 const mapUrl = (map) => `/maps/${encodeURIComponent(map.id)}`;
 
 
-// const COVERS = [
-//   ["ghuri", gauriNagar],
-//   ["shivgarh", shivgad],
-//   ["wardha 2", maheshNagar],
-//   ["wardha 3", vaibhavNagar1],
-//   ["wardha 4", vaibhavNagar2],
-// ];
 const COVERS = [
   ["ghuri", gauriNagar],
   ["mahesh", maheshNagar],
